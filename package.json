@@ -4,7 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "deploy": "git push origin main && git subtree split --prefix public -b gh-pages && git push -f origin gh-pages"
   },
   "engines": {
     "node": ">=22.5"
