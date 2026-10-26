@@ -12,10 +12,10 @@ export const DEFAULTS = {
   ref_cap: 50,       // максимум прибыли с заказа, который уходит на рефку
 };
 export const RANKS = [
-  { min: 0, name: 'Котёнок', pct: 10 },
-  { min: 3, name: 'Барыга', pct: 12 },
-  { min: 10, name: 'Хапуга', pct: 15 },
-  { min: 30, name: 'Босс котов', pct: 20 },
+  { min: 0, name: 'Какашонок', pct: 10 },
+  { min: 3, name: 'Вонючка', pct: 12 },
+  { min: 10, name: 'Говнюк', pct: 15 },
+  { min: 30, name: 'Король унитаза', pct: 20 },
 ];
 export const rankOf = (paid) => {
   let i = 0;

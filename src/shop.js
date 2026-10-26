@@ -154,7 +154,7 @@ export async function transfer(fromId, toRef, amount) {
 
 // «Тим***» — в топе показываем имена не целиком
 export const maskName = (u) => {
-  const n = String(u.first_name || u.username || 'Кот').trim();
+  const n = String(u.first_name || u.username || 'Аноним').trim();
   return n.length <= 3 ? n + '***' : n.slice(0, 3) + '***';
 };
 

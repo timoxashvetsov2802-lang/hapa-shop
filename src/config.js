@@ -12,9 +12,9 @@ const env = (k, d = '') => process.env[k] || d;
 export const config = {
   token: env('BOT_TOKEN'),
   adminId: Number(env('ADMIN_ID', 0)),
-  shopName: env('SHOP_NAME', 'Хапа Shop'),
-  tagline: env('SHOP_TAGLINE', 'хапнул — и доволен'),
-  about: env('SHOP_ABOUT', 'Нейросети, игры и Telegram по ценам ниже рынка. Выдача сразу после оплаты, замена по гарантии.'),
+  shopName: env('SHOP_NAME', 'Govno Shop'),
+  tagline: env('SHOP_TAGLINE', 'говно вопрос'),
+  about: env('SHOP_ABOUT', 'ChatGPT, Claude и Gemini по ценам ниже рынка. Выдача сразу после оплаты, замена по гарантии.'),
   port: Number(env('PORT', 3001)),
   // публичный адрес: свой WEBAPP_URL, адрес Render или туннель (подставится при запуске)
   webappUrl: env('WEBAPP_URL') || env('RENDER_EXTERNAL_URL'),

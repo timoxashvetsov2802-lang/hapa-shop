@@ -22,7 +22,7 @@ export const appUrl = () => (config.pagesUrl && config.webappUrl
 const docUrl = (f) => (config.pagesUrl || config.webappUrl + '/') + f;
 const refLink = (id) => `https://t.me/${bot.botInfo.username}?start=ref_${id}`;
 
-// ---------- баннеры с Хапой (PNG из scripts/banners.js; file_id кэшируем, чтобы не заливать каждый раз) ----------
+// ---------- баннеры с Говнюшей (PNG из scripts/banners.js; file_id кэшируем, чтобы не заливать каждый раз) ----------
 const FILE_IDS = 'data/banners.json';
 const ids = fs.existsSync(FILE_IDS) ? JSON.parse(fs.readFileSync(FILE_IDS, 'utf8')) : {};
 function banner(name) {
@@ -67,14 +67,14 @@ const productMedia = (p) => p.image ? { type: p.image_type === 'video' ? 'animat
 
 function mainKb() {
   const kb = new InlineKeyboard();
-  if (config.webappUrl) kb.webApp('😼 Открыть шоп', appUrl()).row();
+  if (config.webappUrl) kb.webApp('💩 Открыть шоп', appUrl()).row();
   kb.text('📦 Каталог', 'products').text('👤 Профиль', 'profile').row()
     .text('🤑 Рефка · до 20%', 'ref').row()
     .text('ℹ️ О шопе', 'about');
   if (config.links.support) kb.url('💬 Поддержка', config.links.support); else kb.text('💬 Поддержка', 'nolink');
   return kb;
 }
-const mainText = () => `😼 <b>${esc(config.shopName)}</b> — ${esc(config.tagline)}\n\n<blockquote>${esc(config.about)}</blockquote>\n\n🤑 Приводи друзей — получай <b>до 20%</b> с каждой их покупки. Навсегда.`;
+const mainText = () => `💩 <b>${esc(config.shopName)}</b> — ${esc(config.tagline)}\n\n<blockquote>${esc(config.about)}</blockquote>\n\n🤑 Приводи друзей — получай <b>до 20%</b> с каждой их покупки. Навсегда.`;
 const showMain = (ctx) => screen(ctx, banner('start'), mainText(), mainKb(), true);
 
 // ---------- /start ----------
@@ -84,7 +84,7 @@ bot.command('start', async (ctx) => {
   const u = await shop.upsertUser(ctx.from, ref);
   if (u.isNew && u.ref_by) {
     const c = await pricing.cfg();
-    notifyUser(u.ref_by, `😼 По твоей ссылке пришёл <b>${esc(ctx.from.first_name)}</b>!\nКак только он что-нибудь купит — тебе капнет процент на баланс.`);
+    notifyUser(u.ref_by, `💩 По твоей ссылке пришёл <b>${esc(ctx.from.first_name)}</b>!\nКак только он что-нибудь купит — тебе капнет процент на баланс.`);
     await ctx.reply(`🎁 Тебя пригласил друг — на первую покупку скидка <b>${c.first_disc}%</b>, она применится сама.`, { parse_mode: 'HTML' });
   }
   if (arg.startsWith('p_')) return productCard(ctx, Number(arg.slice(2)));
@@ -207,7 +207,7 @@ async function refScreen(ctx) {
   const link = refLink(ctx.from.id);
   const next = i.rank.next ? `\nДо ранга «${i.rank.next.name}» (${i.rank.next.pct}%): ещё ${i.rank.next.min - i.paid} покупающих друзей` : '\n👑 Максимальный ранг!';
   const top = i.top.slice(0, 5).map((t) => `${['🥇', '🥈', '🥉'][t.place - 1] || t.place + '.'} ${esc(t.name)} — ${money(t.sum)}${t.me ? ' ← ты' : ''}`).join('\n');
-  const text = '🤑 <b>Рефка Хапы</b>\n\n'
+  const text = '🤑 <b>Рефка Govno Shop</b>\n\n'
     + `Твой ранг: <b>${esc(i.rank.name)} · ${i.rank.pct}%</b> с каждой покупки друга${next}\n`
     + `Вторая линия: <b>${i.l2pct}%</b> с покупок друзей твоих друзей\n`
     + `Другу — <b>скидка ${i.firstDisc}%</b> на первую покупку\n\n`
@@ -215,7 +215,7 @@ async function refScreen(ctx) {
     + (top ? `\n🏆 <b>Топ за 30 дней</b>\n${top}\n` : '')
     + (i.prize ? `\n🎁 ${esc(i.prize)}\n` : '')
     + `\nТвоя ссылка:\n<code>${link}</code>`;
-  const share = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(`😼 ${config.shopName}: нейросети и игры дешевле. По моей ссылке −${i.firstDisc}% на первую покупку`)}`;
+  const share = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(`💩 ${config.shopName}: ChatGPT, Claude и Gemini дешевле. По моей ссылке −${i.firstDisc}% на первую покупку`)}`;
   const kb = new InlineKeyboard().url('📤 Позвать друга', share).row().text('◁ Назад', 'profile');
   await screen(ctx, banner('ref'), text.slice(0, 1024), kb);
 }
@@ -233,7 +233,7 @@ bot.callbackQuery('orders', async (ctx) => {
   const list = (await shop.userOrders(ctx.from.id)).slice(0, 10);
   const text = list.length
     ? '📜 <b>Последние покупки</b>\n\n' + list.map((o) => `#${o.id} · ${esc(o.product_title)} × ${o.qty} · ${money(o.price)}${o.status === 'pending' ? ' · ⏳ ожидает выдачи' : ''}${o.content ? `\n<code>${esc(o.content)}</code>` : ''}`).join('\n\n')
-    : '📜 Покупок пока нет — Хапа грустит 😼';
+    : '📜 Покупок пока нет — Говнюша грустит 💩';
   await screen(ctx, banner('profile'), text.slice(0, 1024), new InlineKeyboard().text('◁ Назад', 'profile'));
 });
 
@@ -295,7 +295,7 @@ bot.callbackQuery('about', async (ctx) => {
     kb.url('🔒 Политика конфиденциальности', docUrl('privacy.html')).row();
   }
   kb.text('◁ Назад', 'main');
-  await screen(ctx, banner('about'), `😼 <b>${esc(config.shopName)}</b>\n\n<blockquote>${esc(config.about)}</blockquote>`, kb);
+  await screen(ctx, banner('about'), `💩 <b>${esc(config.shopName)}</b>\n\n<blockquote>${esc(config.about)}</blockquote>`, kb);
 });
 
 // ---------- объявление о новых ценах: админу и в канал ----------
@@ -305,8 +305,8 @@ export async function announcePrices(changes) {
   notifyAdmin(`💱 Цены пересчитаны по курсу/закупке:\n${lines}`);
   const visible = changes.filter((x) => x.active && x.from > 0);
   if (config.newsChat && visible.length) {
-    const text = `😼 <b>Обновление цен</b>\n\n${visible.map((x) => `${x.emoji} ${esc(x.title)} — <b>${money(x.to)}</b>${x.to < x.from ? ' 🔻' : ''}`).join('\n')}`;
-    bot.api.sendMessage(config.newsChat, text, { parse_mode: 'HTML', reply_markup: new InlineKeyboard().url('😼 В шоп', `https://t.me/${bot.botInfo.username}`) })
+    const text = `💩 <b>Обновление цен</b>\n\n${visible.map((x) => `${x.emoji} ${esc(x.title)} — <b>${money(x.to)}</b>${x.to < x.from ? ' 🔻' : ''}`).join('\n')}`;
+    bot.api.sendMessage(config.newsChat, text, { parse_mode: 'HTML', reply_markup: new InlineKeyboard().url('💩 В шоп', `https://t.me/${bot.botInfo.username}`) })
       .catch((e) => console.error('news', e.message));
   }
 }
