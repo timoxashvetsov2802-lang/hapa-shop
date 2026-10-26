@@ -2,7 +2,7 @@
 const tg = window.Telegram?.WebApp;
 try {
   tg.ready(); tg.expand();
-  tg.setHeaderColor('#000000'); tg.setBackgroundColor('#000000'); tg.setBottomBarColor?.('#000000');
+  tg.setHeaderColor('#1a0f0a'); tg.setBackgroundColor('#1a0f0a'); tg.setBottomBarColor?.('#1a0f0a');
   tg.disableVerticalSwipes?.();
 } catch {}
 
@@ -225,22 +225,27 @@ function heroBg() {
     : `<div class="bg dim"><img src="${esc(U(h.url))}" alt=""></div>`;
 }
 
-// ---------- вкладка «Магазин»: шапка с Хапой, промо рефки, поиск, фильтр по категориям ----------
+// бегущая строка под шапкой — табличка «как в туалете»
+const TICKER = ['💩 Говно вопрос — подписка за минуту', '🧻 Выдача сразу после оплаты', '💨 Пахнет выгодой', '🚽 Не тужься — замена по гарантии', '🤑 Друзьям −10%, тебе до 20%'].map((t) => '<span>' + t + '</span>').join('');
+// ---------- вкладка «Магазин»: шапка с Говнюшей, промо рефки, поиск, фильтр по категориям ----------
 function renderShop() {
   const el = $('[data-tab=shop]');
   const cats = S.cats.map((c) => ({ c, n: S.products.filter((p) => p.category_id === c.id).length })).filter((x) => x.n);
   const r = S.ref;
   el.innerHTML = `
     <div class="card hero">${heroBg()}${S.shop.hero ? '' : mascot('hi', 'hero-m')}
-      <div class="top"><span class="name">${esc(S.shop.name)}</span>${avatar(S.user)}</div>
+      <div class="top"><span class="name">${esc(S.shop.name)}</span><span class="tr"><button class="snd" id="snd" data-nofart aria-label="Звук">${Fart.muted ? '🔇' : '💨'}</button>${avatar(S.user)}</span></div>
+      <div class="slogan">Говно<br><b>вопрос</b></div>
       <div><div class="lbl">Баланс</div><div class="bal num"><span data-bind="balance">${money(S.user.balance)}</span><i>₽</i><button class="plus" id="plus" aria-label="Пополнить">${ICON.plus}</button></div></div>
     </div>
-    <button class="promo" id="promo">${mascot('money', 'pm')}<span class="mid"><span class="t">Зови друзей — хапай до 20%</span><span class="s">${r && r.friends ? `Друзей: ${r.friends} · заработано ${money(r.income)} ₽` : `С каждой их покупки. Другу −${S.shop.firstDisc || 10}% на первую`}</span></span><span class="go">${ICON.arrow}</span></button>
-    <label class="search">${ICON.search}<input id="q" placeholder="Найти: чат гпт, стим, звёзды…" value="${esc(S.query)}" autocomplete="off" spellcheck="false"></label>
-    ${cats.length ? `<div class="cats"><button class="cat ${S.cat ? '' : 'on'}" data-c="0">Всё <i>${S.products.length}</i></button>${cats.map(({ c, n }) => `<button class="cat ${S.cat === c.id ? 'on' : ''}" data-c="${c.id}">${esc(c.emoji)} ${esc(c.title)} <i>${n}</i></button>`).join('')}</div>` : ''}
+    <div class="ticker" aria-hidden="true"><div>${TICKER}${TICKER}</div></div>
+    <button class="promo" id="promo">${mascot('money', 'pm')}<span class="mid"><span class="t">Зови друзей — получай до 20%</span><span class="s">${r && r.friends ? `Друзей: ${r.friends} · заработано ${money(r.income)} ₽` : `С каждой их покупки. Другу −${S.shop.firstDisc || 10}% на первую`}</span></span><span class="go">${ICON.arrow}</span></button>
+    <label class="search">${ICON.search}<input id="q" placeholder="Найти: чат гпт, клод, гемини…" value="${esc(S.query)}" autocomplete="off" spellcheck="false"></label>
+    ${cats.length > 1 ? `<div class="cats"><button class="cat ${S.cat ? '' : 'on'}" data-c="0">Всё <i>${S.products.length}</i></button>${cats.map(({ c, n }) => `<button class="cat ${S.cat === c.id ? 'on' : ''}" data-c="${c.id}">${esc(c.emoji)} ${esc(c.title)} <i>${n}</i></button>`).join('')}</div>` : ''}
     <div id="list"></div>`;
   $('#plus', el).onclick = () => { H.tap(); openTopup(); };
   $('#promo', el).onclick = () => setTab('ref');
+  $('#snd', el).onclick = (e) => { const m = Fart.toggle(); e.currentTarget.textContent = m ? '🔇' : '💨'; toast(m ? 'Пуки выключены 🤐' : 'Пуки включены 💨'); };
   $$('.cat', el).forEach((b) => (b.onclick = () => { H.sel(); S.cat = Number(b.dataset.c); $$('.cat', el).forEach((x) => x.classList.toggle('on', x === b)); renderList(); }));
   $('#q', el).addEventListener('input', (e) => { S.query = e.target.value; renderList(); });
   renderList();
@@ -317,6 +322,7 @@ async function buyFlow(p, qty) {
   try {
     const r = await api('/buy', { productId: p.id, qty });
     H.ok();
+    Fart.celebrate();
     S.user.balance = r.balance;
     if (p.stock != null) p.stock -= qty;
     refreshState();
@@ -324,7 +330,7 @@ async function buyFlow(p, qty) {
     renderShopStock(p);
     openSheet(`
       <div class="ctr">${mascot('wow', 'sm')}</div>
-      <h3>Хапнул! Заказ #${r.orderId}</h3>
+      <h3>Говно вопрос! Заказ #${r.orderId}</h3>
       ${r.discount ? `<p class="disc">🎁 Скидка новичка: −${money(r.discount)} ₽</p>` : ''}
       ${r.content
         ? `<p>Ваш товар — он также сохранён во вкладке «Покупки»</p><div class="key"><code>${esc(r.content)}</code><button id="cp">Копировать</button></div>`
@@ -500,7 +506,7 @@ function renderOrders() {
 // ---------- вкладка «Рефка» ----------
 const refLink = () => `https://t.me/${S.shop.bot}?start=ref_${S.user.id}`;
 function shareRef() {
-  const text = `😼 ${S.shop.name}: нейросети, игры и Telegram дешевле. По моей ссылке −${S.shop.firstDisc || 10}% на первую покупку`;
+  const text = `💩 ${S.shop.name}: ChatGPT, Claude и Gemini дешевле. По моей ссылке −${S.shop.firstDisc || 10}% на первую покупку`;
   openLink(`https://t.me/share/url?url=${encodeURIComponent(refLink())}&text=${encodeURIComponent(text)}`);
 }
 function renderRef() {
