@@ -150,7 +150,6 @@ function setTab(tab) {
   $$('#app .tab').forEach((s) => (s.hidden = s.dataset.tab !== tab));
   $$('#nav button').forEach((b, i) => { b.classList.toggle('on', b.dataset.tab === tab); if (b.dataset.tab === tab) $('#nav .ind').style.transform = `translateX(${i * 62}px)`; });
   window.scrollTo(0, scrolls[tab] || 0);
-  if (tab === 'ref' && S.user) refreshRef();
   H.tap();
 }
 $$('#nav button').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
@@ -225,26 +224,20 @@ function heroBg() {
     : `<div class="bg dim"><img src="${esc(U(h.url))}" alt=""></div>`;
 }
 
-// бегущая строка под шапкой — табличка «как в туалете»
-const TICKER = ['💩 Говно вопрос — подписка за минуту', '🧻 Выдача сразу после оплаты', '💨 Пахнет выгодой', '🚽 Не тужься — замена по гарантии', '🤑 Друзьям −10%, тебе до 20%'].map((t) => '<span>' + t + '</span>').join('');
-// ---------- вкладка «Магазин»: шапка с Говнюшей, промо рефки, поиск, фильтр по категориям ----------
+// ---------- вкладка «Магазин»: шапка с Говнюшей, поиск, фильтр по категориям ----------
 function renderShop() {
   const el = $('[data-tab=shop]');
   const cats = S.cats.map((c) => ({ c, n: S.products.filter((p) => p.category_id === c.id).length })).filter((x) => x.n);
-  const r = S.ref;
   el.innerHTML = `
     <div class="card hero">${heroBg()}${S.shop.hero ? '' : mascot('hi', 'hero-m')}
       <div class="top"><span class="name">${esc(S.shop.name)}</span><span class="tr"><button class="snd" id="snd" data-nofart aria-label="Звук">${Fart.muted ? '🔇' : '💨'}</button>${avatar(S.user)}</span></div>
       <div class="slogan">Говно<br><b>вопрос</b></div>
       <div><div class="lbl">Баланс</div><div class="bal num"><span data-bind="balance">${money(S.user.balance)}</span><i>₽</i><button class="plus" id="plus" aria-label="Пополнить">${ICON.plus}</button></div></div>
     </div>
-    <div class="ticker" aria-hidden="true"><div>${TICKER}${TICKER}</div></div>
-    <button class="promo" id="promo">${mascot('money', 'pm')}<span class="mid"><span class="t">Зови друзей — получай до 20%</span><span class="s">${r && r.friends ? `Друзей: ${r.friends} · заработано ${money(r.income)} ₽` : `С каждой их покупки. Другу −${S.shop.firstDisc || 10}% на первую`}</span></span><span class="go">${ICON.arrow}</span></button>
     <label class="search">${ICON.search}<input id="q" placeholder="Найти: чат гпт, клод, гемини…" value="${esc(S.query)}" autocomplete="off" spellcheck="false"></label>
     ${cats.length > 1 ? `<div class="cats"><button class="cat ${S.cat ? '' : 'on'}" data-c="0">Всё <i>${S.products.length}</i></button>${cats.map(({ c, n }) => `<button class="cat ${S.cat === c.id ? 'on' : ''}" data-c="${c.id}">${esc(c.emoji)} ${esc(c.title)} <i>${n}</i></button>`).join('')}</div>` : ''}
     <div id="list"></div>`;
   $('#plus', el).onclick = () => { H.tap(); openTopup(); };
-  $('#promo', el).onclick = () => setTab('ref');
   $('#snd', el).onclick = (e) => { const m = Fart.toggle(); e.currentTarget.textContent = m ? '🔇' : '💨'; toast(m ? 'Пуки выключены 🤐' : 'Пуки включены 💨'); };
   $$('.cat', el).forEach((b) => (b.onclick = () => { H.sel(); S.cat = Number(b.dataset.c); $$('.cat', el).forEach((x) => x.classList.toggle('on', x === b)); renderList(); }));
   $('#q', el).addEventListener('input', (e) => { S.query = e.target.value; renderList(); });
@@ -283,7 +276,6 @@ function openProduct(p) {
       <div class="cover" style="--c:${esc(p.color || '#5b6cff')}">${cover}</div>
       <div class="ptl">${lot(p.emoji, 'm', p.icon)}<span>${esc(p.title)}</span></div>
       <div class="pprice num">${money(p.price)} ₽${p.old_price ? ` <s class="old">${money(p.old_price)} ₽</s>` : ''} <span class="stk">${ICON.box}${s.txt}</span></div>
-      ${S.user.ref_by && !S.user.purchases && S.shop.firstDisc ? `<div class="gift">🎁 Тебя пригласил друг — на первую покупку <b>−${S.shop.firstDisc}%</b>, применится сама</div>` : ''}
       <div class="qs">${descHtml(p.description)}</div>
     </div>
     <div class="buybar">
@@ -336,10 +328,10 @@ async function buyFlow(p, qty) {
         ? `<p>Ваш товар — он также сохранён во вкладке «Покупки»</p><div class="key"><code>${esc(r.content)}</code><button id="cp">Копировать</button></div>`
         : '<p>Оператор свяжется с вами в Telegram в ближайшее время</p>'}
       <button class="btn" id="ok" style="margin-top:16px">Готово</button>
-      <button class="btn ghost" id="inv">🤑 Позвать друга и получать %</button>`, (sh) => {
+      <button class="btn ghost" id="inv">🎁 Позвать друга — +100 ₽ тебе</button>`, (sh) => {
       $('#cp', sh)?.addEventListener('click', () => copy(r.content));
       $('#ok', sh).onclick = () => { closeSheet(); back(); };
-      $('#inv', sh).onclick = () => shareRef();
+      $('#inv', sh).onclick = () => { closeSheet(); back(); openInvite(); };
     });
   } catch (e) {
     H.err(); toast(e.message, true);
@@ -503,57 +495,28 @@ function renderOrders() {
   el.onclick = (e) => { const b = e.target.closest('[data-copy]'); if (b) copy(S.orders.find((o) => o.id === Number(b.dataset.copy)).content); };
 }
 
-// ---------- вкладка «Рефка» ----------
+// ---------- «Пригласи друга»: бонус за покупки друга, шторка из профиля ----------
 const refLink = () => `https://t.me/${S.shop.bot}?start=ref_${S.user.id}`;
 function shareRef() {
-  const text = `💩 ${S.shop.name}: ChatGPT, Claude и Gemini дешевле. По моей ссылке −${S.shop.firstDisc || 10}% на первую покупку`;
+  const text = `💩 ${S.shop.name}: ChatGPT, Claude и Gemini — подписка за минуту`;
   openLink(`https://t.me/share/url?url=${encodeURIComponent(refLink())}&text=${encodeURIComponent(text)}`);
 }
-function renderRef() {
-  const el = $('[data-tab=ref]');
-  const r = S.ref;
-  if (!r) { el.innerHTML = '<div class="sk"></div>'; return; }
-  const nx = r.rank.next;
-  const pct = nx ? Math.min(100, Math.round(((r.paid - r.rank.min) / (nx.min - r.rank.min)) * 100)) : 100;
-  const medal = (p) => ['🥇', '🥈', '🥉'][p - 1] || p;
-  const ago = (t) => { const m = Math.floor((Date.now() / 1000 - t) / 60); return m < 60 ? `${Math.max(1, m)} мин` : m < 1440 ? `${Math.floor(m / 60)} ч` : `${Math.floor(m / 1440)} д`; };
-  el.innerHTML = `
-    <div class="card hero refhero"><div class="bg gen gold"></div>${mascot('money', 'hero-m')}
-      <div class="top"><span class="name">Рефка</span><span class="pill">${esc(r.rank.name)} · ${r.rank.pct}%</span></div>
-      <div><div class="lbl">Заработано</div><div class="bal num">${money(r.income)}<i>₽</i></div></div>
+function openInvite() {
+  const r = S.ref || { friends: 0, bonuses: 0, income: 0, bonus: S.shop.refBonus || 100, min: S.shop.refMin || 1000 };
+  openSheet(`
+    <div class="ctr">${mascot('money', 'sm')}</div>
+    <h3>Пригласи друга</h3>
+    <p>За каждую его покупку от ${money(r.min)} ₽ тебе на баланс — <b class="gold">${money(r.bonus)} ₽</b></p>
+    <div class="stats" style="margin-top:0">
+      <div class="stat"><div class="k">Друзей</div><div class="v num">${r.friends}</div></div>
+      <div class="stat"><div class="k">Получено</div><div class="v num">${money(r.income)} ₽</div><div class="h">${r.bonuses} ${plural(r.bonuses, 'бонус', 'бонуса', 'бонусов')}</div></div>
     </div>
-    <div class="rank card">
-      <div class="rk"><span><b>${esc(r.rank.name)}</b> — ${r.rank.pct}% с покупок друзей</span>${nx ? `<span class="s">${r.paid}/${nx.min}</span>` : '<span class="s">👑 максимум</span>'}</div>
-      <div class="pbar"><s style="width:${pct}%"></s></div>
-      <div class="s">${nx ? `Ещё ${nx.min - r.paid} ${plural(nx.min - r.paid, 'покупающий друг', 'покупающих друга', 'покупающих друзей')} — и будет «${esc(nx.name)}» ${nx.pct}%` : 'Ты на вершине кошачьей пирамиды'}</div>
-      <div class="ranks">${r.ranks.map((x, i) => `<span class="${i <= r.rank.level ? 'on' : ''}"><b>${x.pct}%</b>${esc(x.name)}<i>${x.min ? `от ${x.min}` : 'старт'}</i></span>`).join('')}</div>
-    </div>
-    <div class="stats">
-      <div class="stat"><div class="k">Друзей</div><div class="v num">${r.friends}</div><div class="h">покупали: ${r.paid}</div></div>
-      <div class="stat"><div class="k">Вторая линия</div><div class="v num">${r.l2}</div><div class="h">+${r.l2pct}% с их покупок</div></div>
-    </div>
-    <div class="sec">Твоя ссылка</div>
-    <div class="key big"><code>${esc(refLink())}</code><button id="cp">Копировать</button></div>
-    <button class="btn gold" id="share" style="margin-top:10px">📤 Позвать друга</button>
-    <div class="sec">Как это работает</div>
-    <div class="how">
-      <div><b>1</b><span>Кидаешь ссылку другу, в чат или в сторис</span></div>
-      <div><b>2</b><span>Друг получает −${S.shop.firstDisc || 10}% на первую покупку</span></div>
-      <div><b>3</b><span>Тебе на баланс ${r.rank.pct}–20% с каждой его покупки. Навсегда</span></div>
-      <div><b>+</b><span>И ещё ${r.l2pct}% с покупок друзей твоих друзей</span></div>
-    </div>
-    ${r.prize ? `<div class="gift" style="margin-top:10px">🎁 ${esc(r.prize)}</div>` : ''}
-    <div class="sec">🏆 Топ за 30 дней</div>
-    <div class="card top10">${r.top.length ? r.top.map((t) => `<div class="tr ${t.me ? 'me' : ''}"><span class="pl">${medal(t.place)}</span><span class="nm">${esc(t.name)}${t.me ? ' · ты' : ''}</span><span class="num">${money(t.sum)} ₽</span></div>`).join('') : '<div class="s" style="text-align:center;padding:8px">Топ пока пустой — займи первое место 👑</div>'}</div>
-    ${r.recent.length ? `<div class="sec">Последние начисления</div><div class="card top10">${r.recent.map((x) => `<div class="tr"><span class="pl">${x.level === 1 ? '🤝' : '🌿'}</span><span class="nm">${esc(x.name)} <i>${ago(x.at)}</i></span><span class="num plus">+${money(x.amount)} ₽</span></div>`).join('')}</div>` : ''}`;
-  $('#cp', el).onclick = () => copy(refLink(), 'Ссылка скопирована');
-  $('#share', el).onclick = () => { H.tap(); shareRef(); };
-}
-let refBusy = null;
-function refreshRef() {
-  refBusy ||= api('/ref').then((r) => {
-    if (JSON.stringify(r) !== JSON.stringify(S.ref)) { S.ref = r; renderRef(); }
-  }).catch(() => {}).finally(() => (refBusy = null));
+    <div class="key"><code>${esc(refLink())}</code><button id="cp">Копировать</button></div>
+    <button class="btn" id="sh" style="margin-top:14px">Отправить другу</button>`, (sh) => {
+    $('#cp', sh).onclick = () => copy(refLink(), 'Ссылка скопирована');
+    $('#sh', sh).onclick = () => shareRef();
+  });
+  api('/ref').then((x) => { S.ref = x; renderProfile(); }).catch(() => {});
 }
 
 // ---------- вкладка «Профиль» ----------
@@ -581,7 +544,7 @@ function renderProfile() {
     </div>
     <div class="list" style="margin-top:10px">
       <button class="row" id="hist">${lot('🛒', 'm')}<span class="mid"><span class="t" style="display:block">${last ? 'Мои покупки' : 'Покупок пока нет'}</span><span class="s" style="display:block">${last ? `Последняя: ${esc(last.product_title)}` : 'Самое время заглянуть в магазин'}</span></span><span class="go">${ICON.arrow}</span></button>
-      <button class="row" id="ref">${lot('🤑', 'm')}<span class="mid"><span class="t" style="display:block">Рефка · ${S.ref ? S.ref.rank.pct : 10}%</span><span class="s" style="display:block">${S.ref ? `${S.ref.friends} ${plural(S.ref.friends, 'друг', 'друга', 'друзей')} · доход ${money(S.ref.income)} ₽` : 'Зови друзей'}</span></span><span class="go">${ICON.arrow}</span></button>
+      <button class="row" id="ref">${lot('🎁', 'm')}<span class="mid"><span class="t" style="display:block">Пригласи друга</span><span class="s" style="display:block">+${money(S.shop.refBonus || 100)} ₽ за каждую его покупку от ${money(S.shop.refMin || 1000)} ₽</span></span><span class="go">${ICON.arrow}</span></button>
     </div>
     <div class="sec">${esc(S.shop.name)} — ${esc(S.shop.tagline)}</div>
     <div class="tiles" style="margin-top:0">
@@ -596,7 +559,7 @@ function renderProfile() {
   $('#tr', el).onclick = () => { H.tap(); openTransfer(); };
   $('#cpid', el).onclick = () => copy(String(u.id), 'ID скопирован');
   $('#hist', el).onclick = () => setTab(last ? 'orders' : 'shop');
-  $('#ref', el).onclick = () => setTab('ref');
+  $('#ref', el).onclick = () => { H.tap(); openInvite(); };
   el.onclick = (e) => { const b = e.target.closest('[data-url]'); if (b) { H.tap(); openLink(b.dataset.url); } };
 }
 
@@ -612,7 +575,7 @@ function apply(data) {
   return true;
 }
 function renderAll() {
-  renderShop(); renderOrders(); renderRef(); renderProfile();
+  renderShop(); renderOrders(); renderProfile();
   Lot.mount($('#app'));
   Lot.gc();
   document.title = S.shop.name;
@@ -645,7 +608,7 @@ function refreshState() {
   }
   const sp = tg.initDataUnsafe?.start_param || '';
   if (sp.startsWith('p_')) openProduct(byId(Number(sp.slice(2))));
-  if (sp === 'ref') setTab('ref');
+  if (sp === 'ref') openInvite();
 })();
 bindCards($('[data-tab=shop]'));
 bindCards($('[data-tab=orders]'));

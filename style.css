@@ -42,11 +42,9 @@ a { color: inherit; }
 .hero { min-height: 196px; display: flex; flex-direction: column; justify-content: space-between; padding: 18px; isolation: isolate; background: #24150e; }
 .hero .bg { position: absolute; inset: 0; z-index: -1; overflow: hidden; }
 .hero .bg img, .hero .bg video { width: 100%; height: 100%; object-fit: cover; }
-.hero .bg.gen::before, .hero .bg.gen::after { content: ""; position: absolute; width: 140%; height: 140%; left: -20%; top: -20%; will-change: transform; }
-.hero .bg.gen::before { background: radial-gradient(40% 45% at 75% 25%, #e8a33d55, transparent 70%), radial-gradient(35% 40% at 20% 85%, #6b8e2333, transparent 70%); animation: drift 14s ease-in-out infinite alternate; }
-.hero .bg.gen::after { background: radial-gradient(30% 35% at 60% 80%, #a3c45a22, transparent 70%); animation: drift 18s ease-in-out infinite alternate-reverse; }
+.hero .bg.gen::before { content: ""; position: absolute; inset: 0; }
+.hero .bg.gen::before { background: linear-gradient(160deg, #3a2518 0%, #24150e 70%); }
 .hero .bg.dim::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, #0006, #0000 40%, #0008); }
-@keyframes drift { 0% { transform: translate3d(0,0,0) rotate(0); } 100% { transform: translate3d(-8%, 6%, 0) rotate(25deg); } }
 .hero .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .hero .name { font-weight: 700; font-size: 15px; text-shadow: 0 1px 8px #0008; }
 .ava { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background: #3a2518; display: grid; place-items: center; font-weight: 700; flex: none; box-shadow: 0 0 0 2px #fff4e622; }
@@ -217,23 +215,14 @@ body.sub #nav { transform: translate(-50%, 140%); }
 
 /* ---------- Говнюша и фирменные штуки ---------- */
 .hapa { display: block; flex: none; }
-.hapa .wave { transform-origin: 150px 150px; animation: wave 2.4s ease-in-out infinite; }
 .hapa .bag { transform-origin: 163px 196px; animation: bag 3s ease-in-out infinite; }
-@keyframes wave { 0%, 60%, 100% { transform: rotate(0); } 70% { transform: rotate(-14deg); } 80% { transform: rotate(8deg); } 90% { transform: rotate(-8deg); } }
 @keyframes bag { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-6deg) translateY(-2px); } }
 .hero-m { position: absolute; right: -14px; bottom: -22px; width: 168px; height: 168px; z-index: -1; filter: drop-shadow(0 10px 20px #0008); }
 .hm { width: 86px; height: 86px; margin-bottom: -18px; }
 .hapa.sm { width: 120px; height: 120px; margin: 0 auto; }
 .hapa.em { width: 110px; height: 110px; margin: 0 auto 6px; }
 .empty .hapa { opacity: .9; }
-.bg.gen.gold::before { background: radial-gradient(40% 45% at 75% 25%, #ffd36b55, transparent 70%), radial-gradient(35% 40% at 20% 85%, #e8a33d44, transparent 70%); }
 
-.promo { margin-top: var(--gap); width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 14px 10px 8px; border-radius: var(--r); background: linear-gradient(100deg, #e8a33d2e, #ffd36b14 60%, var(--card)); border: 1px solid #e8a33d40; transition: transform .15s; overflow: hidden; }
-.promo:active { transform: scale(.98); }
-.promo .pm { width: 58px; height: 58px; margin: -6px 0 -14px; }
-.promo .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.promo .t { font-weight: 750; } .promo .s { color: #d4b48c; font-size: 12.5px; margin-top: 2px; }
-.promo .go { background: var(--acc); color: #1a0f0a; }
 
 .search { margin-top: var(--gap); display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 18px; padding: 0 14px; height: 46px; }
 .search svg { width: 19px; height: 19px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; flex: none; }
@@ -251,36 +240,8 @@ body.sub #nav { transform: translate(-50%, 140%); }
 .pc.wide .hit { position: static; order: 3; }
 .old { color: var(--dim); font-size: 12px; font-weight: 600; margin-left: 4px; }
 .pprice .old { font-size: 15px; }
-.gift { background: #e8a33d1c; border: 1px solid #e8a33d40; color: #ffe2b8; border-radius: 14px; padding: 11px 14px; font-size: 14px; margin: 0 0 12px; }
 .sh p.disc { color: var(--gold); font-weight: 650; }
 
-/* рефка */
-.refhero { min-height: 190px; }
-.refhero .bal { color: var(--gold); }
-.rank { margin-top: var(--gap); }
-.rank .rk { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-.rank .s { color: var(--muted); font-size: 13px; }
-.pbar { height: 8px; border-radius: 8px; background: #fff4e614; margin: 12px 0 8px; overflow: hidden; }
-.pbar s { display: block; height: 100%; border-radius: 8px; background: linear-gradient(90deg, var(--acc), var(--gold)); transition: width .6s cubic-bezier(.2,.8,.2,1); }
-.ranks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 12px; }
-.ranks span { background: #fff4e60a; border-radius: 12px; padding: 8px 4px; text-align: center; font-size: 11px; color: var(--muted); display: flex; flex-direction: column; gap: 1px; }
-.ranks span b { font-size: 16px; color: #b8a08c; }
-.ranks span i { font-style: normal; font-size: 10.5px; color: var(--dim); }
-.ranks span.on { background: #e8a33d22; color: #ffe2b8; } .ranks span.on b { color: var(--gold); }
-.key.big { background: var(--card); padding: 12px 14px; margin-top: 0; }
-.btn.gold { background: linear-gradient(90deg, var(--acc), var(--gold)); color: #1a0f0a; }
-.how { display: flex; flex-direction: column; gap: 8px; }
-.how div { display: flex; gap: 12px; align-items: center; background: var(--card); border-radius: 16px; padding: 12px 14px; font-size: 14px; }
-.how b { width: 28px; height: 28px; border-radius: 50%; background: #e8a33d26; color: var(--acc); display: grid; place-items: center; flex: none; }
-.top10 { padding: 6px 14px; }
-.top10 .tr { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
-.top10 .tr:last-child { border-bottom: 0; }
-.top10 .pl { width: 26px; text-align: center; font-weight: 700; color: var(--muted); }
-.top10 .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.top10 .nm i { font-style: normal; color: var(--dim); font-size: 12px; margin-left: 4px; }
-.top10 .tr.me { color: var(--gold); font-weight: 700; }
-.top10 .plus { color: var(--ok); font-weight: 650; }
-.top10 .s { color: var(--muted); font-size: 13px; }
 
 /* пук: облачко из точки тапа, кнопка звука, пахучие волны у маскота */
 .puff { position: fixed; z-index: 60; pointer-events: none; font-size: 26px; line-height: 1; transform: translate(-50%, -50%); animation: puff 1s ease-out forwards; }
@@ -288,15 +249,14 @@ body.sub #nav { transform: translate(-50%, 140%); }
 .hero .top .tr { display: flex; align-items: center; gap: 8px; }
 .snd { width: 38px; height: 38px; border-radius: 50%; background: #fff4e61f; display: grid; place-items: center; font-size: 18px; transition: transform .15s; }
 .snd:active { transform: scale(.85); }
-.hapa .stink path { animation: stink 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center bottom; }
-.hapa .stink path:nth-child(2) { animation-delay: .4s; }
-.hapa .stink path:nth-child(3) { animation-delay: .8s; }
-@keyframes stink { 0%, 100% { transform: translateY(0) scaleY(1); opacity: .55; } 50% { transform: translateY(-6px) scaleY(1.12); opacity: 1; } }
 
-/* шапка магазина: слоган и бегущая строка */
+/* шапка магазина: слоган */
 .slogan { font-size: 30px; font-weight: 900; line-height: .95; letter-spacing: -.02em; margin: 14px 0 14px; max-width: 60%; text-shadow: 0 2px 10px #0006; }
 .slogan b { color: var(--gold); }
-.ticker { margin-top: var(--gap); overflow: hidden; border-radius: 14px; background: repeating-linear-gradient(-45deg, #e8a33d, #e8a33d 14px, #d48f2a 14px, #d48f2a 28px); color: #1a0f0a; font-weight: 800; font-size: 13.5px; padding: 8px 0; mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
-.ticker div { display: flex; width: max-content; animation: tick 26s linear infinite; }
-.ticker span { padding: 0 18px; white-space: nowrap; }
-@keyframes tick { to { transform: translateX(-50%); } }
+
+/* правый глаз Говнюши подмигивает раз в несколько секунд */
+.hapa .wink { transform-box: fill-box; transform-origin: center; animation: wink 4.5s infinite; }
+.hapa .wink-lid { opacity: 0; animation: wink-lid 4.5s infinite; }
+@keyframes wink { 0%, 88%, 100% { transform: scaleY(1); } 91%, 95% { transform: scaleY(.05); } }
+@keyframes wink-lid { 0%, 88%, 100% { opacity: 0; } 91%, 95% { opacity: 1; } }
+.sh b.gold { color: var(--gold); }

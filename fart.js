@@ -1,6 +1,6 @@
 'use strict';
 // Фирменная фишка Govno Shop: пук на каждый тап + облачко 💨 из точки касания.
-// Звук синтезируется в Web Audio (без аудиофайлов), каждый раз немного разный. Выключатель запоминается на устройстве.
+// Звук синтезируется в Web Audio (без аудиофайлов): чистый тон с трелью, каждый раз чуть разный. Выключатель запоминается на устройстве.
 const Fart = (() => {
   const KEY = 'gs:mute';
   let ctx = null, last = 0;
@@ -17,7 +17,8 @@ const Fart = (() => {
     return ctx;
   }
 
-  // big = длинный «праздничный» пук (после покупки)
+  // Чистый мультяшный пук: тон (треугольник) съезжает вниз + ровная «трель» по громкости, почти без шума.
+  // big = длинный «праздничный» вариант (после покупки)
   function play(big = false) {
     if (muted) return;
     const now = performance.now();
@@ -26,47 +27,38 @@ const Fart = (() => {
     const a = audio();
     if (!a) return;
     const t = a.currentTime;
-    const d = big ? 0.9 + Math.random() * 0.4 : 0.16 + Math.random() * 0.3;
-    const f0 = (big ? 55 : 70) + Math.random() * 60;
+    const d = big ? 0.7 + Math.random() * 0.25 : 0.14 + Math.random() * 0.12;
+    const f0 = (big ? 150 : 170) + Math.random() * 70;
 
-    // «голос»: пила с дрожащей частотой
     const osc = a.createOscillator();
-    osc.type = 'sawtooth';
+    osc.type = 'triangle';
     osc.frequency.setValueAtTime(f0, t);
-    osc.frequency.exponentialRampToValueAtTime(f0 * (0.45 + Math.random() * 0.2), t + d);
+    osc.frequency.exponentialRampToValueAtTime(f0 * 0.55, t + d);
+
+    // трель: громкость мягко «дрожит» 26–36 раз в секунду
+    const trem = a.createGain();
+    trem.gain.value = 0.6;
     const lfo = a.createOscillator();
-    lfo.frequency.value = 14 + Math.random() * 26;
-    const lfoAmp = a.createGain();
-    lfoAmp.gain.value = f0 * (0.25 + Math.random() * 0.25);
-    lfo.connect(lfoAmp).connect(osc.frequency);
+    lfo.type = 'sine';
+    lfo.frequency.value = 26 + Math.random() * 10;
+    const depth = a.createGain();
+    depth.gain.value = 0.4;
+    lfo.connect(depth).connect(trem.gain);
 
-    // «воздух»: шум
-    const len = Math.ceil(a.sampleRate * d);
-    const buf = a.createBuffer(1, len, a.sampleRate);
-    const ch = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) ch[i] = Math.random() * 2 - 1;
-    const noise = a.createBufferSource();
-    noise.buffer = buf;
-    const noiseAmp = a.createGain();
-    noiseAmp.gain.value = 0.18 + Math.random() * 0.15;
-
-    const filt = a.createBiquadFilter();
-    filt.type = 'lowpass';
-    filt.Q.value = 5 + Math.random() * 6;
-    filt.frequency.setValueAtTime(700 + Math.random() * 500, t);
-    filt.frequency.exponentialRampToValueAtTime(220, t + d);
+    const tone = a.createBiquadFilter();
+    tone.type = 'lowpass';
+    tone.frequency.value = 1400;
+    tone.Q.value = 0.7;
 
     const env = a.createGain();
-    const vol = big ? 0.55 : 0.35;
+    const vol = big ? 0.32 : 0.24;
     env.gain.setValueAtTime(0.0001, t);
-    env.gain.exponentialRampToValueAtTime(vol, t + 0.015);
-    env.gain.setValueAtTime(vol * 0.85, t + d * 0.55);
+    env.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    env.gain.setValueAtTime(vol, t + d * 0.7);
     env.gain.exponentialRampToValueAtTime(0.0001, t + d);
 
-    osc.connect(filt);
-    noise.connect(noiseAmp).connect(filt);
-    filt.connect(env).connect(a.destination);
-    for (const n of [osc, lfo, noise]) { n.start(t); n.stop(t + d + 0.02); }
+    osc.connect(trem).connect(tone).connect(env).connect(a.destination);
+    for (const n of [osc, lfo]) { n.start(t); n.stop(t + d + 0.02); }
   }
 
   // облачко из точки касания
