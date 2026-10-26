@@ -1,10 +1,12 @@
 'use strict';
-// Говнюша — маскот Govno Shop: довольная какашка с золотой цепью и пахучими волнами.
+// Говнюша — маскот Govno Shop: довольная какашка с золотой цепью.
 // mascot(mood): 'hi' — подмигивает, 'money' — глаза-монеты и мешок, 'wow' — удивлён, 'sad' — грустит.
 function mascot(mood = 'hi', cls = '') {
   const eyes = {
     hi: '<circle cx="80" cy="140" r="12" fill="#fff"/><circle cx="82" cy="141" r="6.5" fill="#1a0f0a"/><circle cx="85" cy="138" r="2.2" fill="#fff"/>'
-      + '<path d="M108 141q12-10 24 0" stroke="#1a0f0a" stroke-width="4.5" fill="none" stroke-linecap="round"/>',
+      // правый глаз открыт и время от времени подмигивает (анимация .wink в style.css)
+      + '<g class="wink"><circle cx="120" cy="140" r="12" fill="#fff"/><circle cx="122" cy="141" r="6.5" fill="#1a0f0a"/><circle cx="125" cy="138" r="2.2" fill="#fff"/></g>'
+      + '<path class="wink-lid" d="M108 141q12-10 24 0" stroke="#1a0f0a" stroke-width="4.5" fill="none" stroke-linecap="round"/>',
     wow: '<circle cx="80" cy="139" r="14" fill="#fff"/><circle cx="120" cy="139" r="14" fill="#fff"/><circle cx="80" cy="139" r="7.5" fill="#1a0f0a"/><circle cx="120" cy="139" r="7.5" fill="#1a0f0a"/><circle cx="84" cy="135" r="2.6" fill="#fff"/><circle cx="124" cy="135" r="2.6" fill="#fff"/>',
     sad: '<circle cx="80" cy="142" r="11" fill="#fff"/><circle cx="120" cy="142" r="11" fill="#fff"/><circle cx="80" cy="145" r="6" fill="#1a0f0a"/><circle cx="120" cy="145" r="6" fill="#1a0f0a"/><path d="M66 126l22 6M134 126l-22 6" stroke="#1a0f0a" stroke-width="4" stroke-linecap="round"/><path d="M128 152q4 8 0 12q-4-4 0-12z" fill="#7dd3fc"/>',
     money: '<circle cx="80" cy="140" r="13" fill="#ffd36b" stroke="#a86b12" stroke-width="2.5"/><circle cx="120" cy="140" r="13" fill="#ffd36b" stroke="#a86b12" stroke-width="2.5"/><text x="80" y="146" font-size="17" font-weight="900" text-anchor="middle" fill="#7a4a00" font-family="Arial">₽</text><text x="120" y="146" font-size="17" font-weight="900" text-anchor="middle" fill="#7a4a00" font-family="Arial">₽</text>',
@@ -19,9 +21,6 @@ function mascot(mood = 'hi', cls = '') {
     ? '<g class="bag"><path d="M156 150q-12 0-14 20t18 24h14q20-4 18-24t-14-20z" fill="#e7c48a" stroke="#8a6a3a" stroke-width="3"/><path d="M158 150l-5-9h26l-5 9z" fill="#d4ad6c" stroke="#8a6a3a" stroke-width="3" stroke-linejoin="round"/><text x="167" y="182" font-size="22" font-weight="900" text-anchor="middle" fill="#5b3d10" font-family="Arial">₽</text></g>'
     : '';
   return `<svg class="hapa ${mood} ${cls}" viewBox="0 0 200 200" aria-hidden="true">
-  <g class="stink" fill="none" stroke="#a3c45a" stroke-width="4" stroke-linecap="round" opacity=".75">
-    <path d="M70 44q-8-8 0-16t0-16"/><path d="M100 30q-8-8 0-16t0-16"/><path d="M130 44q-8-8 0-16t0-16"/>
-  </g>
   <path d="M26 172q0-34 38-38h72q38 4 38 38q0 24-74 24t-74-24z" fill="#6e3f22"/>
   <path d="M44 136q0-28 34-31h44q34 3 34 31q0 14-56 14t-56-14z" fill="#80492a"/>
   <path d="M64 106q0-22 26-25q2-20 24-26q-6 14 2 22q22 4 20 29q0 10-36 10t-36-10z" fill="#925634"/>

@@ -5,11 +5,8 @@
 <style>
   html, body { margin: 0; width: 1200px; height: 600px; overflow: hidden; background: #1a0f0a; font-family: "Segoe UI", Arial, sans-serif; }
   .b { position: relative; width: 1200px; height: 600px; overflow: hidden; color: #fff4e6; }
-  .glow { position: absolute; border-radius: 50%; filter: blur(90px); }
-  .g1 { width: 640px; height: 640px; right: -100px; top: -140px; background: #e8a33d70; }
-  .g2 { width: 520px; height: 520px; left: -160px; bottom: -260px; background: var(--c2, #6e3f2290); }
-  .dots { position: absolute; inset: 0; background-image: radial-gradient(#fff4e612 2px, transparent 2px); background-size: 34px 34px; mask-image: linear-gradient(90deg, #000, transparent 70%); }
-  .hapa { position: absolute; right: 40px; bottom: -6px; width: 540px; height: 540px; filter: drop-shadow(0 30px 40px #000a); }
+  .b::after { content: ""; position: absolute; right: 0; top: 0; width: 620px; height: 600px; background: #2a1a12; border-radius: 300px 0 0 300px; z-index: 0; }
+  .hapa { position: absolute; z-index: 1; right: 40px; bottom: -6px; width: 540px; height: 540px; filter: drop-shadow(0 30px 40px #000a); }
   .txt { position: absolute; left: 72px; top: 50%; transform: translateY(-50%); max-width: 720px; }
   .tag { display: inline-block; background: #e8a33d; color: #1a0f0a; font-weight: 900; font-size: 26px; padding: 8px 20px; border-radius: 40px; letter-spacing: .04em; }
   h1 { font-size: 100px; line-height: .95; margin: 26px 0 18px; font-weight: 900; letter-spacing: -.03em; }
@@ -23,12 +20,11 @@ const B = {
   start:    { tag: 'GOVNO SHOP 💩', h: 'Говно<br><b>вопрос</b>', p: 'ChatGPT, Claude и Gemini —<br>подписка за минуту', m: 'hi', c2: '#6e3f2290' },
   products: { tag: 'КАТАЛОГ', h: 'Выбирай,<br><b>не тужься</b>', p: 'Выдача сразу после оплаты', m: 'wow', c2: '#3f6e2290' },
   profile:  { tag: 'ПРОФИЛЬ', h: 'Твоя<br><b>заначка</b>', p: 'Баланс, покупки и бонусы', m: 'money', c2: '#6e5a2290' },
-  ref:      { tag: 'РЕФКА ДО 20%', h: 'Зови друзей,<br><b>не жмись</b>', p: 'Процент с каждой их покупки.<br>Навсегда.', m: 'money', c2: '#8a6a1a90' },
+  ref:      { tag: 'ПРИГЛАСИ ДРУГА', h: '+100 ₽<br><b>за друга</b>', p: 'За каждую его покупку<br>от 1000 ₽', m: 'money', c2: '#8a6a1a90' },
   about:    { tag: 'О ШОПЕ', h: 'Пахнет<br><b>выгодой</b>', p: 'Гарантия, поддержка, замены', m: 'hi', c2: '#6e223f90' },
 };
 const k = new URLSearchParams(location.search).get('b') || 'start';
 const d = B[k];
-document.getElementById('b').innerHTML = `<div class="glow g1"></div><div class="glow g2" style="--c2:${d.c2}"></div><div class="dots"></div>
-  ${mascot(d.m)}<div class="txt"><span class="tag">${d.tag}</span><h1>${d.h}</h1><p>${d.p}</p></div>`;
+document.getElementById('b').innerHTML = `${mascot(d.m)}<div class="txt"><span class="tag">${d.tag}</span><h1>${d.h}</h1><p>${d.p}</p></div>`;
 </script>
 </body></html>

@@ -7,22 +7,10 @@ export const DEFAULTS = {
   min_profit: 30,    // минимальная прибыль с одной штуки, ₽ — ниже не продаём
   p2p_pct: 2,        // запас на курс P2P при закупке USDT за рубли
   low_stock: 3,      // предупреждать, когда на складе осталось столько или меньше
-  first_disc: 10,    // скидка новичку по реф-ссылке на первую покупку
-  ref_l2: 3,         // процент со второй линии
-  ref_cap: 50,       // максимум прибыли с заказа, который уходит на рефку
+  ref_bonus: 100,    // бонус пригласившему за покупку друга, ₽
+  ref_min: 1000,     // от какой суммы покупки друга начисляется бонус, ₽
+  ref_cap: 50,       // бонус не больше этой доли прибыли заказа, %
 };
-export const RANKS = [
-  { min: 0, name: 'Какашонок', pct: 10 },
-  { min: 3, name: 'Вонючка', pct: 12 },
-  { min: 10, name: 'Говнюк', pct: 15 },
-  { min: 30, name: 'Король унитаза', pct: 20 },
-];
-export const rankOf = (paid) => {
-  let i = 0;
-  while (i + 1 < RANKS.length && paid >= RANKS[i + 1].min) i++;
-  return { ...RANKS[i], level: i, next: RANKS[i + 1] || null };
-};
-
 export async function cfg() {
   const rows = await q.all('SELECT key, value FROM settings');
   const s = Object.fromEntries(rows.map((r) => [r.key, r.value]));
@@ -31,7 +19,6 @@ export async function cfg() {
   c.usdt_rate = Number(s.usdt_rate) || 0;
   c.rate_manual = s.rate_manual === '1';
   c.rate_at = Number(s.rate_at) || 0;
-  c.ref_prize = s.ref_prize || '';
   return c;
 }
 

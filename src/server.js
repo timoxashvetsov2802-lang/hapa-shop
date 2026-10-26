@@ -108,7 +108,7 @@ export function createServer({ notifyUser, afterBuy, onLoss, botUsername, webhoo
       shop: {
         name: config.shopName, tagline: config.tagline, about: config.about, bot: botUsername(), links: config.links,
         hero: hero ? { url: `/api/media/hero?v=${hero.slice(-8)}`, type: heroType } : null,
-        firstDisc: c.first_disc,
+        refBonus: c.ref_bonus, refMin: c.ref_min,
       },
       methods: pay.methods(u.id), ref, orders, ...catalog,
     };
@@ -124,7 +124,7 @@ export function createServer({ notifyUser, afterBuy, onLoss, botUsername, webhoo
     try { r = await shop.buy(req.uid, productId, Number(req.body.qty || 1)); }
     catch (e) { if (e.code === 'loss') onLoss(productId).catch(() => {}); throw e; }
     afterBuy(r, req.tgUser).catch(() => {});
-    return { orderId: r.orderId, content: r.content, status: r.status, total: r.total, discount: r.discount, balance: r.balance };
+    return { orderId: r.orderId, content: r.content, status: r.status, total: r.total, balance: r.balance };
   }));
   api.post('/topup', wrap((req) => pay.createTopup(req.uid, req.body.amount, req.body.method)));
   api.post('/transfer', wrap(async (req) => {

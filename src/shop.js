@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { q, tx, now } from './db.js';
 import { config } from './config.js';
-import { cfg, costRub, rankOf, RANKS } from './pricing.js';
+import { cfg, costRub } from './pricing.js';
 
 export class ShopError extends Error {
   constructor(msg, code) { super(msg); this.code = code; }
@@ -50,16 +50,6 @@ export async function listCatalog() {
 
 export const getProduct = (id) => q.get(`${STOCK_SQL} WHERE p.id = ?`, id);
 
-// Скидка новичку, пришедшему по реф-ссылке: не больше, чем позволяет минимальная прибыль
-function firstDiscount(p, u, total, qty, c) {
-  if (!u.ref_by || u.purchases > 0 || !(c.first_disc > 0)) return 0;
-  const want = total * c.first_disc / 100;
-  const cost = costRub(p, c);
-  if (!(cost > 0)) return floor2(want);
-  const room = total - (cost + c.min_profit) * qty / (1 - c.fee_pct / 100);
-  return Math.max(0, floor2(Math.min(want, room)));
-}
-
 export async function buy(userId, productId, qty = 1) {
   qty = Math.floor(qty);
   if (!(qty >= 1 && qty <= 100)) throw new ShopError('Некорректное количество');
@@ -68,9 +58,7 @@ export async function buy(userId, productId, qty = 1) {
     const p = await t.get(`${STOCK_SQL} WHERE p.id = ?`, productId);
     if (!p || !p.active) throw new ShopError('Товар не найден');
     const u = await t.get('SELECT * FROM users WHERE id = ?', userId);
-    const total = r2(p.price * qty);
-    const discount = firstDiscount(p, u, total, qty, c);
-    const charged = r2(total - discount);
+    const charged = r2(p.price * qty);
 
     // Защита от минуса: если закупка подорожала, а цена ещё старая — не продаём
     let profit = charged * (1 - c.fee_pct / 100);
@@ -96,38 +84,28 @@ export async function buy(userId, productId, qty = 1) {
     for (const i of items) await t.run('UPDATE stock SET order_id = ? WHERE id = ?', oid, i.id);
     await t.run('UPDATE users SET balance = balance - ?, purchases = purchases + ?, spent = spent + ? WHERE id = ?', charged, qty, charged, userId);
 
-    const rewards = await payReferrals(t, u, oid, charged, profit, c);
+    const rewards = await payRefBonus(t, u, oid, charged, profit, c);
     return {
-      orderId: oid, product: p, qty, total: charged, discount, content, status, rewards,
+      orderId: oid, product: p, qty, total: charged, content, status, rewards,
       balance: r2(u.balance - charged), stockLeft: p.unlimited ? null : p.stock - qty,
     };
   });
 }
 
-// Рефка с покупки: 1-я линия по рангу пригласившего, 2-я — фикс. Всё вместе не больше ref_cap% прибыли заказа.
-async function payReferrals(t, buyer, orderId, charged, profit, c) {
-  if (!buyer.ref_by) return [];
-  const l1 = await t.get('SELECT id, ref_by FROM users WHERE id = ?', buyer.ref_by);
-  if (!l1) return [];
-  const paid = (await t.get('SELECT COUNT(*) AS n FROM users WHERE ref_by = ? AND purchases > 0', l1.id)).n;
-  const list = [{ to: l1.id, level: 1, amount: charged * rankOf(paid).pct / 100 }];
-  if (l1.ref_by && l1.ref_by !== buyer.id) list.push({ to: l1.ref_by, level: 2, amount: charged * c.ref_l2 / 100 });
-  const cap = Math.max(0, profit * c.ref_cap / 100);
-  const sum = list.reduce((a, x) => a + x.amount, 0);
-  const k = sum > cap ? cap / sum : 1;
-  const out = [];
-  for (const x of list) {
-    const amount = floor2(x.amount * k);
-    if (amount <= 0) continue;
-    await t.run('UPDATE users SET balance = balance + ?, ref_income = ref_income + ? WHERE id = ?', amount, amount, x.to);
-    await t.run('INSERT INTO ref_rewards (user_id, from_user, order_id, level, amount, created_at) VALUES (?,?,?,?,?,?)',
-      x.to, buyer.id, orderId, x.level, amount, now());
-    out.push({ ...x, amount });
-  }
-  return out;
+// Бонус пригласившему: ref_bonus ₽ за каждую покупку друга от ref_min ₽.
+// Не больше ref_cap% прибыли заказа — чтобы бонус никогда не уводил продажу в минус.
+async function payRefBonus(t, buyer, orderId, charged, profit, c) {
+  if (!buyer.ref_by || charged < c.ref_min || !(c.ref_bonus > 0)) return [];
+  if (!(await t.get('SELECT 1 AS x FROM users WHERE id = ?', buyer.ref_by))) return [];
+  const amount = floor2(Math.min(c.ref_bonus, Math.max(0, profit * c.ref_cap / 100)));
+  if (amount <= 0) return [];
+  await t.run('UPDATE users SET balance = balance + ?, ref_income = ref_income + ? WHERE id = ?', amount, amount, buyer.ref_by);
+  await t.run('INSERT INTO ref_rewards (user_id, from_user, order_id, level, amount, created_at) VALUES (?,?,?,?,?,?)',
+    buyer.ref_by, buyer.id, orderId, 1, amount, now());
+  return [{ to: buyer.ref_by, amount }];
 }
 
-// Пополнение баланса. Рефка начисляется с покупок, а не с пополнений — так её нельзя накрутить.
+// Пополнение баланса. Бонус за друга начисляется с покупок, а не с пополнений — так его нельзя накрутить.
 export async function credit(userId, amount) {
   await q.run('UPDATE users SET balance = balance + ? WHERE id = ?', amount, userId);
   return null;
@@ -152,31 +130,15 @@ export async function transfer(fromId, toRef, amount) {
   });
 }
 
-// «Тим***» — в топе показываем имена не целиком
-export const maskName = (u) => {
-  const n = String(u.first_name || u.username || 'Аноним').trim();
-  return n.length <= 3 ? n + '***' : n.slice(0, 3) + '***';
-};
-
+// Сводка «пригласи друга»: сколько пришло, сколько бонусов получено и условия
 export async function refInfo(userId) {
   const c = await cfg();
-  const month = now() - 30 * 86400;
-  const [u, friends, paid, l2, top, recent] = await Promise.all([
+  const [u, friends, bonuses] = await Promise.all([
     getUser(userId),
     q.get('SELECT COUNT(*) AS n FROM users WHERE ref_by = ?', userId),
-    q.get('SELECT COUNT(*) AS n FROM users WHERE ref_by = ? AND purchases > 0', userId),
-    q.get('SELECT COUNT(*) AS n FROM users WHERE ref_by IN (SELECT id FROM users WHERE ref_by = ?)', userId),
-    q.all(`SELECT r.user_id, SUM(r.amount) AS s, u.first_name, u.username FROM ref_rewards r JOIN users u ON u.id = r.user_id
-      WHERE r.created_at > ? GROUP BY r.user_id ORDER BY s DESC LIMIT 10`, month),
-    q.all(`SELECT r.amount, r.level, r.created_at, u.first_name, u.username FROM ref_rewards r JOIN users u ON u.id = r.from_user
-      WHERE r.user_id = ? ORDER BY r.id DESC LIMIT 10`, userId),
+    q.get('SELECT COUNT(*) AS n FROM ref_rewards WHERE user_id = ?', userId),
   ]);
-  return {
-    friends: friends.n, paid: paid.n, l2: l2.n, income: u?.ref_income || 0,
-    rank: rankOf(paid.n), ranks: RANKS, l2pct: c.ref_l2, firstDisc: c.first_disc, prize: c.ref_prize,
-    top: top.map((x, i) => ({ place: i + 1, name: maskName(x), sum: r2(x.s), me: x.user_id === userId })),
-    recent: recent.map((x) => ({ name: maskName(x), amount: x.amount, level: x.level, at: x.created_at })),
-  };
+  return { friends: friends.n, bonuses: bonuses.n, income: u?.ref_income || 0, bonus: c.ref_bonus, min: c.ref_min };
 }
 
 export const userOrders = (id) => q.all('SELECT id, product_id, product_title, qty, price, content, status, created_at FROM orders WHERE user_id = ? ORDER BY id DESC LIMIT 100', id);

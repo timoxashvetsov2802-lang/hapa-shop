@@ -69,12 +69,12 @@ function mainKb() {
   const kb = new InlineKeyboard();
   if (config.webappUrl) kb.webApp('💩 Открыть шоп', appUrl()).row();
   kb.text('📦 Каталог', 'products').text('👤 Профиль', 'profile').row()
-    .text('🤑 Рефка · до 20%', 'ref').row()
+    .text('🎁 Пригласи друга', 'ref').row()
     .text('ℹ️ О шопе', 'about');
   if (config.links.support) kb.url('💬 Поддержка', config.links.support); else kb.text('💬 Поддержка', 'nolink');
   return kb;
 }
-const mainText = () => `💩 <b>${esc(config.shopName)}</b> — ${esc(config.tagline)}\n\n<blockquote>${esc(config.about)}</blockquote>\n\n🤑 Приводи друзей — получай <b>до 20%</b> с каждой их покупки. Навсегда.`;
+const mainText = () => `💩 <b>${esc(config.shopName)}</b> — ${esc(config.tagline)}\n\n<blockquote>${esc(config.about)}</blockquote>`;
 const showMain = (ctx) => screen(ctx, banner('start'), mainText(), mainKb(), true);
 
 // ---------- /start ----------
@@ -84,8 +84,7 @@ bot.command('start', async (ctx) => {
   const u = await shop.upsertUser(ctx.from, ref);
   if (u.isNew && u.ref_by) {
     const c = await pricing.cfg();
-    notifyUser(u.ref_by, `💩 По твоей ссылке пришёл <b>${esc(ctx.from.first_name)}</b>!\nКак только он что-нибудь купит — тебе капнет процент на баланс.`);
-    await ctx.reply(`🎁 Тебя пригласил друг — на первую покупку скидка <b>${c.first_disc}%</b>, она применится сама.`, { parse_mode: 'HTML' });
+    notifyUser(u.ref_by, `💩 По твоей ссылке пришёл <b>${esc(ctx.from.first_name)}</b>!\nЗа каждую его покупку от ${money(c.ref_min)} тебе на баланс придёт ${money(c.ref_bonus)}.`);
   }
   if (arg.startsWith('p_')) return productCard(ctx, Number(arg.slice(2)));
   if (arg === 'ref') return refScreen(ctx);
@@ -121,12 +120,9 @@ bot.callbackQuery(/^c:(\d+)$/, async (ctx) => { await ctx.answerCallbackQuery();
 async function productCard(ctx, id) {
   const p = await shop.getProduct(id);
   if (!p || !p.active || !(p.price > 0)) return ctx.reply('Товар не найден');
-  const u = await shop.getUser(ctx.from.id);
-  const c = await pricing.cfg();
   const stock = p.unlimited ? '∞' : `${p.stock} шт.`;
   const old = p.old_price > p.price ? ` <s>${money(p.old_price)}</s>` : '';
-  const first = u?.ref_by && !u.purchases && c.first_disc ? `\n🎁 <b>Твоя скидка на первую покупку: −${c.first_disc}%</b>` : '';
-  const text = `${p.emoji} <b>${esc(p.title)}</b>\n\n${shop.descToHtml(p.description)}\n\n💰 <b>Цена:</b> ${money(p.price)}${old}\n📦 <b>В наличии:</b> ${stock}${first}`;
+  const text = `${p.emoji} <b>${esc(p.title)}</b>\n\n${shop.descToHtml(p.description)}\n\n💰 <b>Цена:</b> ${money(p.price)}${old}\n📦 <b>В наличии:</b> ${stock}`;
   const kb = new InlineKeyboard();
   if (p.unlimited || p.stock > 0) kb.text('💳 Купить', `buy:${p.id}`).row();
   kb.text('◁ Назад', p.category_id ? `c:${p.category_id}` : 'products');
@@ -152,13 +148,11 @@ bot.callbackQuery(/^bq:(\d+):(\d+)$/, async (ctx) => {
   await doBuy(ctx, Number(ctx.match[1]), Number(ctx.match[2]));
 });
 
-// После покупки (из бота или мини-аппки): рефка, остаток склада, заказы без склада
+// После покупки (из бота или мини-аппки): бонус пригласившему, остаток склада, заказы без склада
 export async function afterBuy(r, buyer) {
   const c = await pricing.cfg();
   for (const x of r.rewards || []) {
-    notifyUser(x.to, x.level === 1
-      ? `🤑 <b>+${money(x.amount)}</b> на баланс!\nТвой друг ${esc(buyer.first_name)} купил «${esc(r.product.title)}».`
-      : `🤑 <b>+${money(x.amount)}</b> со второй линии — друг твоего друга купил «${esc(r.product.title)}».`);
+    notifyUser(x.to, `🎁 <b>+${money(x.amount)}</b> на баланс — твой друг ${esc(buyer.first_name)} купил «${esc(r.product.title)}».`);
   }
   if (r.status === 'pending') {
     notifyAdmin(`🛎 Новый заказ #${r.orderId} (без склада)\n${esc(r.product.title)} × ${r.qty} = ${money(r.total)}\nПокупатель: ${who(buyer)} <code>${buyer.id}</code>\nВыдать: <code>/done ${r.orderId} текст</code>`);
@@ -178,9 +172,7 @@ async function doBuy(ctx, productId, qty) {
   try {
     const r = await shop.buy(ctx.from.id, productId, qty);
     let text = `✅ <b>Заказ #${r.orderId} оплачен</b>\n${esc(r.product.title)} × ${r.qty} — ${money(r.total)}`;
-    if (r.discount) text += `\n🎁 Скидка новичка: −${money(r.discount)}`;
     text += r.content ? `\n\n<b>Ваш товар:</b>\n<code>${esc(r.content)}</code>` : '\n\nОператор свяжется с вами в ближайшее время.';
-    text += '\n\n🤑 Понравилось? Кинь другу свою ссылку — получишь % с его покупок: /ref';
     await ctx.reply(text, { parse_mode: 'HTML', reply_markup: new InlineKeyboard().text('◁ В меню', 'main') });
     afterBuy(r, ctx.from).catch(() => {});
   } catch (e) {
@@ -190,12 +182,12 @@ async function doBuy(ctx, productId, qty) {
   }
 }
 
-// ---------- профиль / рефка / пополнение ----------
+// ---------- профиль / приглашения / пополнение ----------
 async function profileScreen(ctx) {
   const u = (await shop.getUser(ctx.from.id)) || (await shop.upsertUser(ctx.from));
   const d = new Date(u.created_at * 1000).toLocaleDateString('ru-RU');
-  const text = `👤 <b>Профиль</b>\n\n<blockquote>🆔 ID: <code>${u.id}</code>\n💼 Баланс: <b>${money(u.balance)}</b>\n📦 Покупок: ${u.purchases}\n💸 Потрачено: ${money(u.spent)}\n🤑 С рефки: ${money(u.ref_income)}\n🗓 С нами с ${d}</blockquote>`;
-  const kb = new InlineKeyboard().text('💰 Пополнить', 'topup').text('🤑 Рефка', 'ref').row()
+  const text = `👤 <b>Профиль</b>\n\n<blockquote>🆔 ID: <code>${u.id}</code>\n💼 Баланс: <b>${money(u.balance)}</b>\n📦 Покупок: ${u.purchases}\n💸 Потрачено: ${money(u.spent)}\n🎁 За друзей: ${money(u.ref_income)}\n🗓 С нами с ${d}</blockquote>`;
+  const kb = new InlineKeyboard().text('💰 Пополнить', 'topup').text('🎁 Пригласить', 'ref').row()
     .text('💸 Передать баланс', 'transfer').text('📜 Покупки', 'orders').row().text('◁ Назад', 'main');
   await screen(ctx, banner('profile'), text, kb);
 }
@@ -205,17 +197,11 @@ async function refScreen(ctx) {
   await shop.upsertUser(ctx.from);
   const i = await shop.refInfo(ctx.from.id);
   const link = refLink(ctx.from.id);
-  const next = i.rank.next ? `\nДо ранга «${i.rank.next.name}» (${i.rank.next.pct}%): ещё ${i.rank.next.min - i.paid} покупающих друзей` : '\n👑 Максимальный ранг!';
-  const top = i.top.slice(0, 5).map((t) => `${['🥇', '🥈', '🥉'][t.place - 1] || t.place + '.'} ${esc(t.name)} — ${money(t.sum)}${t.me ? ' ← ты' : ''}`).join('\n');
-  const text = '🤑 <b>Рефка Govno Shop</b>\n\n'
-    + `Твой ранг: <b>${esc(i.rank.name)} · ${i.rank.pct}%</b> с каждой покупки друга${next}\n`
-    + `Вторая линия: <b>${i.l2pct}%</b> с покупок друзей твоих друзей\n`
-    + `Другу — <b>скидка ${i.firstDisc}%</b> на первую покупку\n\n`
-    + `<blockquote>👥 Друзей: ${i.friends} (покупали: ${i.paid})\n🌿 Вторая линия: ${i.l2}\n💰 Заработано: <b>${money(i.income)}</b></blockquote>\n`
-    + (top ? `\n🏆 <b>Топ за 30 дней</b>\n${top}\n` : '')
-    + (i.prize ? `\n🎁 ${esc(i.prize)}\n` : '')
+  const text = '🎁 <b>Пригласи друга</b>\n\n'
+    + `За каждую покупку друга от <b>${money(i.min)}</b> тебе на баланс — <b>${money(i.bonus)}</b>.\n\n`
+    + `<blockquote>👥 Друзей: ${i.friends}\n🎁 Бонусов: ${i.bonuses} на ${money(i.income)}</blockquote>\n`
     + `\nТвоя ссылка:\n<code>${link}</code>`;
-  const share = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(`💩 ${config.shopName}: ChatGPT, Claude и Gemini дешевле. По моей ссылке −${i.firstDisc}% на первую покупку`)}`;
+  const share = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(`💩 ${config.shopName}: ChatGPT, Claude и Gemini — подписка за минуту`)}`;
   const kb = new InlineKeyboard().url('📤 Позвать друга', share).row().text('◁ Назад', 'profile');
   await screen(ctx, banner('ref'), text.slice(0, 1024), kb);
 }
@@ -341,7 +327,6 @@ admin('admin', (ctx) => ctx.reply(
 
 <b>Остальное</b>
 /orders — заказы без склада · /done номер текст
-/prize текст — приз для топа рефки (пусто — убрать)
 /stats · /say текст — рассылка всем`, { parse_mode: 'HTML' }));
 
 admin('plist', async (ctx) => {
@@ -447,9 +432,9 @@ admin('reprice', async (ctx) => {
 });
 admin('cfg', async (ctx) => {
   const c = await pricing.cfg();
-  const H = { fee_pct: 'комиссия приёма, %', markup_pct: 'наценка по умолчанию, %', min_profit: 'мин. прибыль со штуки, ₽', p2p_pct: 'запас на курс P2P, %', low_stock: 'предупреждать при остатке, шт', first_disc: 'скидка новичку по рефке, %', ref_l2: 'рефка 2-я линия, %', ref_cap: 'макс. доля прибыли на рефку, %' };
+  const H = { fee_pct: 'комиссия приёма, %', markup_pct: 'наценка по умолчанию, %', min_profit: 'мин. прибыль со штуки, ₽', p2p_pct: 'запас на курс P2P, %', low_stock: 'предупреждать при остатке, шт', ref_bonus: 'бонус за покупку друга, ₽', ref_min: 'бонус с покупки друга от, ₽', ref_cap: 'бонус не больше доли прибыли заказа, %' };
   await ctx.reply(Object.entries(H).map(([k, h]) => `<code>${k}</code> = <b>${c[k]}</b> — ${h}`).join('\n')
-    + `\n\nРанги рефки: ${pricing.RANKS.map((r) => `${r.name} ${r.pct}% (от ${r.min})`).join(', ')}\nКурс USDT: ${c.usdt_rate || '—'}\n\nИзменить: <code>/set fee_pct 5</code>`, { parse_mode: 'HTML' });
+    + `\n\nКурс USDT: ${c.usdt_rate || '—'}\n\nИзменить: <code>/set fee_pct 5</code>`, { parse_mode: 'HTML' });
 });
 admin('set', async (ctx) => {
   const [k, v] = ctx.match.split(/\s+/);
@@ -458,7 +443,6 @@ admin('set', async (ctx) => {
   await announcePrices(await pricing.repriceAll());
   await ctx.reply(`${k} = ${Number(v)}`);
 });
-admin('prize', async (ctx) => { await setSetting('ref_prize', ctx.match.trim()); await ctx.reply(ctx.match.trim() ? 'Приз сохранён' : 'Приз убран'); });
 
 admin('pay', async (ctx) => {
   const [id, amt] = ctx.match.split(/\s+/).map(Number);
@@ -505,7 +489,7 @@ admin('stats', async (ctx) => {
     q.get('SELECT COUNT(*) AS n, SUM(price) AS sum FROM orders WHERE created_at > ?', day),
     q.get('SELECT COUNT(*) AS n FROM users WHERE ref_by IS NOT NULL'),
   ]);
-  await ctx.reply(`Юзеров: ${s.users} (по рефке: ${refs.n})\nНа балансах: ${money(s.bal || 0)}\nЗаказов: ${o.n} на ${money(o.sum || 0)}\nЗа сутки: ${d.n} на ${money(d.sum || 0)}\nПополнено: ${money(p.sum || 0)}\nВыплачено рефки: ${money(r.sum || 0)}`);
+  await ctx.reply(`Юзеров: ${s.users} (по приглашениям: ${refs.n})\nНа балансах: ${money(s.bal || 0)}\nЗаказов: ${o.n} на ${money(o.sum || 0)}\nЗа сутки: ${d.n} на ${money(d.sum || 0)}\nПополнено: ${money(p.sum || 0)}\nВыплачено рефки: ${money(r.sum || 0)}`);
 });
 admin('say', async (ctx) => {
   if (!ctx.match) return ctx.reply('Формат: /say текст');
@@ -622,7 +606,7 @@ export async function refreshMenus() {
 export async function setupMenu() {
   await bot.api.setMyCommands([
     { command: 'start', description: 'Главное меню' },
-    { command: 'ref', description: 'Рефка — до 20% с покупок друзей' },
+    { command: 'ref', description: 'Пригласи друга — +100 ₽ на баланс' },
   ]).catch(() => {});
   if (config.webappUrl) {
     await bot.api.setChatMenuButton({ menu_button: { type: 'web_app', text: 'Шоп', web_app: { url: appUrl() } } }).catch((e) => console.error('menu', e.message));
