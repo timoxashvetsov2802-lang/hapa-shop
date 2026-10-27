@@ -2,13 +2,17 @@
 // Говнюша — маскот Govno Shop: довольная какашка с золотой цепью.
 // mascot(mood): 'hi' — подмигивает, 'money' — глаза-монеты и мешок, 'wow' — удивлён, 'sad' — грустит.
 function mascot(mood = 'hi', cls = '') {
+  // глаз: белок + зрачок с бликом; зрачок (.pupil) двигает трекинг взгляда внизу файла
+  const eye = (x, y, r, pr, dy = 0) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff"/>`
+    + `<g class="pupil" data-x="${x}" data-y="${y}" data-max="${r - pr - 1}"><circle cx="${x}" cy="${y + dy}" r="${pr}" fill="#1a0f0a"/>`
+    + `<circle cx="${x + pr * 0.45}" cy="${y + dy - pr * 0.45}" r="${pr * 0.34}" fill="#fff"/></g>`;
   const eyes = {
-    hi: '<circle cx="80" cy="140" r="12" fill="#fff"/><circle cx="82" cy="141" r="6.5" fill="#1a0f0a"/><circle cx="85" cy="138" r="2.2" fill="#fff"/>'
-      // правый глаз открыт и время от времени подмигивает (анимация .wink в style.css)
-      + '<g class="wink"><circle cx="120" cy="140" r="12" fill="#fff"/><circle cx="122" cy="141" r="6.5" fill="#1a0f0a"/><circle cx="125" cy="138" r="2.2" fill="#fff"/></g>'
+    // правый глаз время от времени подмигивает (анимация .wink в style.css)
+    hi: eye(80, 140, 12, 6.5)
+      + `<g class="wink">${eye(120, 140, 12, 6.5)}</g>`
       + '<path class="wink-lid" d="M108 141q12-10 24 0" stroke="#1a0f0a" stroke-width="4.5" fill="none" stroke-linecap="round"/>',
-    wow: '<circle cx="80" cy="139" r="14" fill="#fff"/><circle cx="120" cy="139" r="14" fill="#fff"/><circle cx="80" cy="139" r="7.5" fill="#1a0f0a"/><circle cx="120" cy="139" r="7.5" fill="#1a0f0a"/><circle cx="84" cy="135" r="2.6" fill="#fff"/><circle cx="124" cy="135" r="2.6" fill="#fff"/>',
-    sad: '<circle cx="80" cy="142" r="11" fill="#fff"/><circle cx="120" cy="142" r="11" fill="#fff"/><circle cx="80" cy="145" r="6" fill="#1a0f0a"/><circle cx="120" cy="145" r="6" fill="#1a0f0a"/><path d="M66 126l22 6M134 126l-22 6" stroke="#1a0f0a" stroke-width="4" stroke-linecap="round"/><path d="M128 152q4 8 0 12q-4-4 0-12z" fill="#7dd3fc"/>',
+    wow: eye(80, 139, 14, 7.5) + eye(120, 139, 14, 7.5),
+    sad: eye(80, 142, 11, 6, 3) + eye(120, 142, 11, 6, 3) + '<path d="M66 126l22 6M134 126l-22 6" stroke="#1a0f0a" stroke-width="4" stroke-linecap="round"/><path d="M128 152q4 8 0 12q-4-4 0-12z" fill="#7dd3fc"/>',
     money: '<circle cx="80" cy="140" r="13" fill="#ffd36b" stroke="#a86b12" stroke-width="2.5"/><circle cx="120" cy="140" r="13" fill="#ffd36b" stroke="#a86b12" stroke-width="2.5"/><text x="80" y="146" font-size="17" font-weight="900" text-anchor="middle" fill="#7a4a00" font-family="Arial">₽</text><text x="120" y="146" font-size="17" font-weight="900" text-anchor="middle" fill="#7a4a00" font-family="Arial">₽</text>',
   }[mood] || '';
   const mouth = {
@@ -33,3 +37,32 @@ function mascot(mood = 'hi', cls = '') {
   ${prop}
 </svg>`;
 }
+
+// Взгляд Говнюши: на ПК зрачки следят за курсором, на телефоне смотрят туда, куда тапнули или ведут пальцем.
+(() => {
+  if (typeof addEventListener !== 'function') return;
+  let px = 0, py = 0, raf = 0, idle = 0;
+  const pupils = () => document.querySelectorAll('.hapa .pupil');
+  const look = () => {
+    raf = 0;
+    for (const g of pupils()) {
+      const m = g.ownerSVGElement?.getScreenCTM();
+      if (!m) continue;
+      const x = +g.dataset.x, y = +g.dataset.y, max = +g.dataset.max;
+      const sx = m.a * x + m.c * y + m.e, sy = m.b * x + m.d * y + m.f; // центр глаза на экране
+      const dx = px - sx, dy = py - sy, dist = Math.hypot(dx, dy) || 1;
+      const k = (Math.min(1, dist / 160) * max) / dist; // курсор рядом с глазом — смещение меньше
+      g.style.transform = `translate(${(dx * k).toFixed(2)}px, ${(dy * k).toFixed(2)}px)`;
+    }
+  };
+  const aim = (e) => {
+    px = e.clientX; py = e.clientY;
+    if (!raf) raf = requestAnimationFrame(look);
+    if (e.pointerType !== 'mouse') { // на телефоне через пару секунд снова смотрит прямо
+      clearTimeout(idle);
+      idle = setTimeout(() => { for (const g of pupils()) g.style.transform = ''; }, 2500);
+    }
+  };
+  addEventListener('pointermove', aim, { passive: true });
+  addEventListener('pointerdown', aim, { passive: true });
+})();

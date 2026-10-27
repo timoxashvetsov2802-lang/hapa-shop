@@ -260,3 +260,4 @@ body.sub #nav { transform: translate(-50%, 140%); }
 @keyframes wink { 0%, 88%, 100% { transform: scaleY(1); } 91%, 95% { transform: scaleY(.05); } }
 @keyframes wink-lid { 0%, 88%, 100% { opacity: 0; } 91%, 95% { opacity: 1; } }
 .sh b.gold { color: var(--gold); }
+.hapa .pupil { transition: transform .12s ease-out; }
